@@ -1,6 +1,8 @@
 ﻿using BitwiseSharp.Enums;
 using BitwiseSharp.Types;
 
+using static BitwiseSharp.Constants.Colors;
+
 namespace BitwiseSharp.Core
 {
     internal class Parser
@@ -23,6 +25,8 @@ namespace BitwiseSharp.Core
 
         internal Result<Node> ParseExpression()
         {
+            Result<Node> result;
+
             if (_tokens[0].Type == TokenType.Let)
             {
                 if (_tokens[1].Type != TokenType.Identifier)
@@ -36,10 +40,9 @@ namespace BitwiseSharp.Core
                 var binaryResult = ParseBinaryExpression(0);
                 if (!binaryResult.IsSuccess) return binaryResult;
 
-                return Result<Node>.Success(new VariableDefinitionNode(variableName, binaryResult.Value));
+                result = Result<Node>.Success(new VariableDefinitionNode(variableName, binaryResult.Value));
             }
-
-            if (_tokens.Count > 1 && (_tokens[0].Type == TokenType.Identifier && _tokens[1].Type == TokenType.Assignment))
+            else if (_tokens.Count > 1 && (_tokens[0].Type == TokenType.Identifier && _tokens[1].Type == TokenType.Assignment))
             {
                 string variableName = _tokens[0].VariableName;
                 if (_tokens[1].Type != TokenType.Assignment)
@@ -49,10 +52,17 @@ namespace BitwiseSharp.Core
                 var binaryResult = ParseBinaryExpression(0);
                 if (!binaryResult.IsSuccess) return binaryResult;
 
-                return Result<Node>.Success(new VariableAssignmentNode(variableName, binaryResult.Value));
+                result = Result<Node>.Success(new VariableAssignmentNode(variableName, binaryResult.Value));
             }
+            else if (_tokens.Count > 1 && (_tokens[0].Type == TokenType.Number && _tokens[1].Type == TokenType.Assignment))
+                result = Result<Node>.Failure("Invalid syntax: Left-hand side of assignment must be a variable.");
+            else
+                result = ParseBinaryExpression(0);
 
-            return ParseBinaryExpression(0);
+            if (result.IsSuccess && _verbose)
+                Console.WriteLine(PrintAST(result.Value));
+
+            return result;
         }
 
         private Result<Node> ParseBinaryExpression(int minPrecedence)
@@ -70,7 +80,7 @@ namespace BitwiseSharp.Core
                 Token op = ConsumeToken();
 
                 int nextMinPrecedence = rightAssociative ? precedence : precedence + 1;
-                var rightResult = ParseBinaryExpression(nextMinPrecedence);
+                Result<Node> rightResult = ParseBinaryExpression(nextMinPrecedence);
                 if (!rightResult.IsSuccess) return rightResult;
 
                 Node right = rightResult.Value;
@@ -85,7 +95,7 @@ namespace BitwiseSharp.Core
             if (IsUnaryOperator(CurrentToken()))
             {
                 Token op = ConsumeToken();
-                var operandResult = ParseUnaryExpression();
+                Result<Node> operandResult = ParseUnaryExpression();
                 if (!operandResult.IsSuccess) return operandResult;
 
                 return Result<Node>.Success(new UnaryNode(op.Type, operandResult.Value));
@@ -96,6 +106,12 @@ namespace BitwiseSharp.Core
 
         private Result<Node> ParsePrimary()
         {
+            if (_position >= _tokens.Count)
+            {
+                return Result<Node>.Failure("Unexpected end of input while parsing.");
+            }
+
+
             if (CurrentToken().Type == TokenType.Number)
             {
                 Token numberToken = ConsumeToken();
@@ -105,11 +121,13 @@ namespace BitwiseSharp.Core
             if (CurrentToken().Type == TokenType.LeftParenthesis)
             {
                 ConsumeToken();
-                var exprResult = ParseExpression();
-                if (!exprResult.IsSuccess)return exprResult;
+                Result<Node> exprResult = ParseExpression();
+                if (!exprResult.IsSuccess) return exprResult;
 
-                if (CurrentToken().Type != TokenType.RightParenthesis)
-                    return Result<Node>.Failure("Expected closing parenthesis");
+                if (_position >= _tokens.Count || CurrentToken().Type != TokenType.RightParenthesis)
+                {
+                    return Result<Node>.Failure("Invalid syntax: Expected closing parenthesis.");
+                }
 
                 ConsumeToken();
                 return Result<Node>.Success(exprResult.Value);
@@ -122,12 +140,45 @@ namespace BitwiseSharp.Core
                 return Result<Node>.Success(new VariableReferenceNode(variableName));
             }
 
-            return Result<Node>.Failure($"Unexpected token: {CurrentToken().Type}");
+            return Result<Node>.Failure($"Invalid syntax: Unexpected token: {CurrentToken().Type}");
         }
 
         private Token CurrentToken() => _position < _tokens.Count ? _tokens[_position] : null;
         private Token ConsumeToken() => _tokens[_position++];
         private bool IsOperator(Token token) => Precedence.OperatorPrecedence.ContainsKey(token.Type);
         private bool IsUnaryOperator(Token token) => token.Type == TokenType.BitwiseNot;
+
+        private static string PrintAST(Node node, int indentLevel = 0)
+        {
+            string indent = new string(' ', indentLevel * 4);
+
+            return node switch
+            {
+                NumberNode numberNode =>
+                    $"{indent}{ORANGE}Number:{ANSI_RESET} {numberNode.Value}{ANSI_RESET}\n",
+
+                UnaryNode unaryNode =>
+                    $"{indent}{PINK}Unary:{ANSI_RESET} {YELLOW}{unaryNode.Operator}{ANSI_RESET}\n" +
+                    $"{PrintAST(unaryNode.Operand, indentLevel + 1)}",
+
+                BinaryNode binaryNode =>
+                    $"{indent}{LIGHT_BLUE}Binary:{ANSI_RESET} {YELLOW}{binaryNode.Operator}{ANSI_RESET}\n" +
+                    $"{PrintAST(binaryNode.Left, indentLevel + 1)}" +
+                    $"{PrintAST(binaryNode.Right, indentLevel + 1)}",
+
+                VariableDefinitionNode variableDefinitionNode =>
+                    $"{indent}{CYAN}Variable Definition:{ANSI_RESET} {variableDefinitionNode.VariableName}{ANSI_RESET}\n" +
+                    $"{PrintAST(variableDefinitionNode.RightHandSide, indentLevel + 1)}",
+
+                VariableAssignmentNode variableAssignmentNode =>
+                    $"{indent}{LIGHT_BLUE}Variable Assignment:{ANSI_RESET} {variableAssignmentNode.VariableName}{ANSI_RESET}\n" +
+                    $"{PrintAST(variableAssignmentNode.RightHandSide, indentLevel + 1)}",
+
+                VariableReferenceNode variableReferenceNode =>
+                    $"{indent}{GREEN}Variable Reference:{ANSI_RESET} {variableReferenceNode.VariableName}{ANSI_RESET}\n",
+
+                _ => $"{indent}{RED}Unknown node{ANSI_RESET}\n"
+            };
+        }
     }
 }

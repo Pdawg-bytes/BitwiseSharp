@@ -67,6 +67,43 @@ namespace BitwiseSharp.Core
                 }
                 currentIndex++;
             }
+
+            if (Verbose)
+            {
+                Console.WriteLine();
+                int typeWidth = tokens.Max(t => t.Type.ToString().Length);
+                int valueWidth = tokens.Max(t => t.Type == TokenType.Identifier ? t.VariableName.Length : t.NumberValue.ToString().Length);
+
+                for (int i = 0; i < tokens.Count; i++)
+                {
+                    string val = tokens[i].Type == TokenType.Identifier ? tokens[i].VariableName : tokens[i].NumberValue.ToString();
+
+                    string typeColor = tokens[i].Type switch
+                    {
+                        TokenType.Let => LIGHT_BLUE,
+                        TokenType.Identifier => GREEN,
+                        TokenType.Assignment => CYAN,
+                        TokenType.Number => ORANGE,
+                        TokenType.LeftParenthesis => LIGHT_RED,
+                        TokenType.RightParenthesis => LIGHT_RED,
+                        TokenType.BitwiseNot => YELLOW,
+                        TokenType.BitwiseAnd => YELLOW,
+                        TokenType.BitwiseOr => YELLOW,
+                        TokenType.BitwiseXor => YELLOW,
+                        TokenType.LeftShift => YELLOW,
+                        TokenType.RightShift => YELLOW,
+                        TokenType.Unknown => RED,
+                        _ => ANSI_RESET
+                    };
+
+                    Console.WriteLine($"{LIGHT_GRAY}Token {(i + 1).ToString("000")}:{ANSI_RESET} " +
+                                      $"{typeColor}{tokens[i].Type.ToString().PadRight(typeWidth)}{ANSI_RESET} " +
+                                      $"Value: {val.PadLeft(valueWidth)}");
+                }
+
+                Console.WriteLine();
+            }
+
             return Result<List<Token>>.Success(tokens);
         }
 

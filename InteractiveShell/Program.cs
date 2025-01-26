@@ -9,7 +9,7 @@ namespace InteractiveShell
 
         static void Main(string[] args)
         {
-            _parser = new(false, new BitwiseSharp.Core.EnvironmentContext());
+            _parser = new(true, new BitwiseSharp.Core.EnvironmentContext());
             RunShell();
         }
 
