@@ -1,16 +1,31 @@
 ﻿using BitwiseSharp;
+using static BitwiseSharp.Constants.Colors;
 
 namespace InteractiveShell
 {
     internal class Program
     {
+        static BitwiseEvalulator _parser;  
+
         static void Main(string[] args)
         {
-            BitwiseExpressionParser parser = new(true);
+            _parser = new(false, new BitwiseSharp.Core.EnvironmentContext());
+            RunShell();
+        }
 
-            Console.Write("Enter a bitwise expression to evaluate: ");
-            string expr = Console.ReadLine();
-            Console.WriteLine(parser.EvaluateExpression(expr));
+        static void RunShell()
+        {
+            Console.Write($"{PURPLE}>>> {LIGHT_BLUE}");
+            string input = Console.ReadLine();
+            Console.Write(ANSI_RESET);
+
+            if (input == "exit") return;
+
+            var exp = _parser.EvaluateExpression(input);
+            if (exp.IsSuccess) Console.WriteLine(exp.Value);
+            else Console.WriteLine(RED + exp.Error + ANSI_RESET);
+
+            RunShell();
         }
     }
 }

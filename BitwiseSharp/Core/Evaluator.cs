@@ -6,42 +6,81 @@ namespace BitwiseSharp.Core
     internal class Evaluator
     {
         private readonly bool _verbose;
+        private readonly EnvironmentContext _environmentContext;
 
-        internal Evaluator(bool verbose) 
+        internal Evaluator(bool verbose, EnvironmentContext environmentContext) 
         {
             _verbose = verbose;
+            _environmentContext = environmentContext;
         }
 
-        internal ArbitraryNumber Evaluate(Node node)
+        internal Result<ArbitraryNumber> Evaluate(Node node)
         {
             switch (node)
             {
+                case VariableDefinitionNode varDefNode:
+                    var initialResult = Evaluate(varDefNode.RightHandSide);
+                    if (!initialResult.IsSuccess) return initialResult;
+
+                    ArbitraryNumber initialValue = initialResult.Value;
+                    if (!_environmentContext.TryCreateVariable(varDefNode.VariableName, initialValue))
+                        return Result<ArbitraryNumber>.Failure($"The variable '{varDefNode.VariableName}' is already defined in this scope.");
+
+                    return Result<ArbitraryNumber>.Success(initialValue);
+
+                case VariableReferenceNode varRefNode:
+                    ArbitraryNumber variableValue;
+                    if (!_environmentContext.TryGetVariable(varRefNode.VariableName, out variableValue))
+                        return Result<ArbitraryNumber>.Failure($"The variable '{varRefNode.VariableName}' is not defined in this scope.");
+
+                    return Result<ArbitraryNumber>.Success(variableValue);
+
+                case VariableAssignmentNode varAssignmentNode:
+                    var newValueResult = Evaluate(varAssignmentNode.RightHandSide);
+                    if (!newValueResult.IsSuccess) return newValueResult;
+
+                    ArbitraryNumber newValue = newValueResult.Value;
+                    if (!_environmentContext.HasVariable(varAssignmentNode.VariableName))
+                        return Result<ArbitraryNumber>.Failure($"The variable '{varAssignmentNode.VariableName}' is not defined in this scope.");
+
+                    _environmentContext.SetVariable(varAssignmentNode.VariableName, newValue);
+                    return Result<ArbitraryNumber>.Success(newValue);
+
                 case NumberNode numberNode:
-                    return numberNode.Value;
-                
+                    return Result<ArbitraryNumber>.Success(numberNode.Value);
+
                 case UnaryNode unaryNode:
-                    ArbitraryNumber operand = Evaluate(unaryNode.Operand);
+                    var operandResult = Evaluate(unaryNode.Operand);
+                    if (!operandResult.IsSuccess)return operandResult;
+
+                    ArbitraryNumber operand = operandResult.Value;
                     return unaryNode.Operator switch
                     {
-                        TokenType.BitwiseNot => ~operand,
-                        _ => throw new InvalidOperationException($"Invalid unary operator type: {unaryNode.Operator}")
+                        TokenType.BitwiseNot => Result<ArbitraryNumber>.Success(~operand),
+                        _ => Result<ArbitraryNumber>.Failure($"Invalid unary operator type: {unaryNode.Operator}")
                     };
 
                 case BinaryNode binaryNode:
-                    ArbitraryNumber left = Evaluate(binaryNode.Left);
-                    ArbitraryNumber right = Evaluate(binaryNode.Right);
+                    var leftResult = Evaluate(binaryNode.Left);
+                    if (!leftResult.IsSuccess) return leftResult;
+                    ArbitraryNumber left = leftResult.Value;
+
+                    var rightResult = Evaluate(binaryNode.Right);
+                    if (!rightResult.IsSuccess) return rightResult;
+                    ArbitraryNumber right = rightResult.Value;
+
                     return binaryNode.Operator switch
                     {
-                        TokenType.BitwiseAnd => left & right,
-                        TokenType.BitwiseOr => left | right,
-                        TokenType.BitwiseXor => left ^ right,
-                        TokenType.LeftShift => left << (int)right,
-                        TokenType.RightShift => left >> (int)right,
-                        _ => throw new InvalidOperationException($"Invalid binary operator type: {binaryNode.Operator}")
+                        TokenType.BitwiseAnd => Result<ArbitraryNumber>.Success(left & right),
+                        TokenType.BitwiseOr => Result<ArbitraryNumber>.Success(left | right),
+                        TokenType.BitwiseXor => Result<ArbitraryNumber>.Success(left ^ right),
+                        TokenType.LeftShift => Result<ArbitraryNumber>.Success(left << (int)right),
+                        TokenType.RightShift => Result<ArbitraryNumber>.Success(left >> (int)right),
+                        _ => Result<ArbitraryNumber>.Failure($"Invalid binary operator type: {binaryNode.Operator}")
                     };
             }
 
-            return 0;
+            return Result<ArbitraryNumber>.Failure("Unknown error evaluating node.");
         }
     }
 }

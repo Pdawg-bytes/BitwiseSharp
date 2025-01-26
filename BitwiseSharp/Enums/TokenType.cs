@@ -6,6 +6,10 @@
         LeftParenthesis,
         RightParenthesis,
 
+        Let,
+        Identifier,
+        Assignment,
+
         BitwiseAnd,
         BitwiseOr,
         BitwiseXor,

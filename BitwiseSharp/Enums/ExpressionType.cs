@@ -4,6 +4,9 @@
     {
         Number,
         UnaryOperator,
-        BinaryOperator
+        BinaryOperator,
+        VariableDefinition,
+        VariableAssignment,
+        IdentifierReference
     }
 }

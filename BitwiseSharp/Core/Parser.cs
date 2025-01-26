@@ -6,7 +6,7 @@ namespace BitwiseSharp.Core
     internal class Parser
     {
         private List<Token> _tokens;
-        private int _currentTokenIndex;
+        private int _position;
 
         private bool _verbose;
 
@@ -18,103 +18,116 @@ namespace BitwiseSharp.Core
         internal void SetTokens(List<Token> tokens)
         {
             _tokens = tokens;
-            _currentTokenIndex = 0;
+            _position = 0;
         }
 
-        internal Node Parse()
+        internal Result<Node> ParseExpression()
         {
-            Node parsed = ParseExpression();
-            if (_verbose) Console.WriteLine("Expression AST: \n" + PrintAST(parsed));
-            return parsed;
-        }
-
-        private Node ParseExpression(int minPrecedence = -1)
-        {
-            Node left = ParsePrimary();
-
-            while (_currentTokenIndex < _tokens.Count)
+            if (_tokens[0].Type == TokenType.Let)
             {
-                Token currentToken = _tokens[_currentTokenIndex];
-                int precedence = Precedence.GetPrecedence(currentToken.Type);
+                if (_tokens[1].Type != TokenType.Identifier)
+                    return Result<Node>.Failure("Invalid syntax: Expected a variable name after 'let'.");
 
-                if (precedence < minPrecedence)
-                    break;
+                string variableName = _tokens[1].VariableName;
+                if (_tokens[2].Type != TokenType.Assignment)
+                    return Result<Node>.Failure("Invalid syntax: Expected '=' after the variable name.");
 
-                _currentTokenIndex++;
-                Node right = ParsePrimary();
+                _tokens = _tokens.Skip(3).ToList();
+                var binaryResult = ParseBinaryExpression(0);
+                if (!binaryResult.IsSuccess) return binaryResult;
 
-                while (_currentTokenIndex < _tokens.Count)
-                {
-                    Token nextToken = _tokens[_currentTokenIndex];
-                    int nextPrecedence = Precedence.GetPrecedence(nextToken.Type);
-
-                    if (nextPrecedence <= precedence)
-                        break;
-
-                    right = ParseExpression(precedence + 1);
-                }
-
-                left = currentToken.Type switch
-                {
-                    TokenType.BitwiseAnd => new BinaryNode("&", TokenType.BitwiseAnd, left, right),
-                    TokenType.BitwiseOr => new BinaryNode("|", TokenType.BitwiseOr, left, right),
-                    TokenType.BitwiseXor => new BinaryNode("^", TokenType.BitwiseXor, left, right),
-                    TokenType.LeftShift => new BinaryNode("<<", TokenType.LeftShift, left, right),
-                    TokenType.RightShift => new BinaryNode(">>", TokenType.RightShift, left, right),
-                    _ => left
-                };
-
-                Console.WriteLine("Expression AST: " + $"current token: {_currentTokenIndex}" + "\n" + PrintAST(left));
+                return Result<Node>.Success(new VariableDefinitionNode(variableName, binaryResult.Value));
             }
 
-            
-            return left;
-        }
-
-        private Node ParsePrimary()
-        {
-            Token currentToken = _tokens[_currentTokenIndex];
-            _currentTokenIndex++;
-
-            switch (currentToken.Type)
+            if (_tokens.Count > 1 && (_tokens[0].Type == TokenType.Identifier && _tokens[1].Type == TokenType.Assignment))
             {
-                case TokenType.Number:
-                    return new NumberNode(currentToken.TokenValue);
+                string variableName = _tokens[0].VariableName;
+                if (_tokens[1].Type != TokenType.Assignment)
+                    return Result<Node>.Failure("Invalid syntax: Expected '=' after the variable name.");
 
-                case TokenType.LeftParenthesis:
-                    Node expr = ParseExpression();
-                    if (_tokens[_currentTokenIndex].Type != TokenType.RightParenthesis)
-                        throw new Exception("Expected closing parenthesis.");
-                    _currentTokenIndex++;
-                    return expr;
+                _tokens = _tokens.Skip(2).ToList();
+                var binaryResult = ParseBinaryExpression(0);
+                if (!binaryResult.IsSuccess) return binaryResult;
 
-                case TokenType.BitwiseNot:
-                    return new UnaryNode("~", TokenType.BitwiseNot, ParsePrimary());
+                return Result<Node>.Success(new VariableAssignmentNode(variableName, binaryResult.Value));
             }
 
-            throw new Exception($"Unexpected token: {currentToken.Type} value {currentToken.TokenValue} at token {_currentTokenIndex}");
+            return ParseBinaryExpression(0);
         }
 
-        private static string PrintAST(Node node, int indentLevel = 0)
+        private Result<Node> ParseBinaryExpression(int minPrecedence)
         {
-            string indent = new string(' ', indentLevel * 4);
+            var leftResult = ParseUnaryExpression();
+            if (!leftResult.IsSuccess) return leftResult;
 
-            return node switch
+            Node left = leftResult.Value;
+
+            while (_position < _tokens.Count && IsOperator(CurrentToken()))
             {
-                NumberNode numberNode =>
-                    $"{indent}Number: {numberNode.Value}\n",
+                var (precedence, rightAssociative) = Precedence.OperatorPrecedence[CurrentToken().Type];
+                if (precedence < minPrecedence) break;
 
-                UnaryNode unaryNode =>
-                    $"{indent}Unary: {unaryNode.Operator}\n" +
-                    $"{PrintAST(unaryNode.Operand, indentLevel + 1)}",
+                Token op = ConsumeToken();
 
-                BinaryNode binaryNode =>
-                    $"{indent}Binary: {binaryNode.Operator}\n" +
-                    $"{PrintAST(binaryNode.Left, indentLevel + 1)}" +
-                    $"{PrintAST(binaryNode.Right, indentLevel + 1)}",
+                int nextMinPrecedence = rightAssociative ? precedence : precedence + 1;
+                var rightResult = ParseBinaryExpression(nextMinPrecedence);
+                if (!rightResult.IsSuccess) return rightResult;
 
-                _ => $"{indent}Unknown node\n"
-            };
+                Node right = rightResult.Value;
+                left = new BinaryNode(op.Type, left, right);
+            }
+
+            return Result<Node>.Success(left);
         }
+
+        private Result<Node> ParseUnaryExpression()
+        {
+            if (IsUnaryOperator(CurrentToken()))
+            {
+                Token op = ConsumeToken();
+                var operandResult = ParseUnaryExpression();
+                if (!operandResult.IsSuccess) return operandResult;
+
+                return Result<Node>.Success(new UnaryNode(op.Type, operandResult.Value));
+            }
+
+            return ParsePrimary();
+        }
+
+        private Result<Node> ParsePrimary()
+        {
+            if (CurrentToken().Type == TokenType.Number)
+            {
+                Token numberToken = ConsumeToken();
+                return Result<Node>.Success(new NumberNode(numberToken.NumberValue));
+            }
+
+            if (CurrentToken().Type == TokenType.LeftParenthesis)
+            {
+                ConsumeToken();
+                var exprResult = ParseExpression();
+                if (!exprResult.IsSuccess)return exprResult;
+
+                if (CurrentToken().Type != TokenType.RightParenthesis)
+                    return Result<Node>.Failure("Expected closing parenthesis");
+
+                ConsumeToken();
+                return Result<Node>.Success(exprResult.Value);
+            }
+
+            if (CurrentToken().Type == TokenType.Identifier)
+            {
+                string variableName = CurrentToken().VariableName;
+                ConsumeToken();
+                return Result<Node>.Success(new VariableReferenceNode(variableName));
+            }
+
+            return Result<Node>.Failure($"Unexpected token: {CurrentToken().Type}");
+        }
+
+        private Token CurrentToken() => _position < _tokens.Count ? _tokens[_position] : null;
+        private Token ConsumeToken() => _tokens[_position++];
+        private bool IsOperator(Token token) => Precedence.OperatorPrecedence.ContainsKey(token.Type);
+        private bool IsUnaryOperator(Token token) => token.Type == TokenType.BitwiseNot;
     }
 }
