@@ -7,25 +7,23 @@ namespace BitwiseSharp
 {
     public class BitwiseEvalulator
     {
-        private readonly bool _verbose;
+        private readonly Tokenizer _tokenizer;
         private readonly Parser _parser;
         private readonly Evaluator _evaluator;
 
         public readonly EnvironmentContext EnvironmentContext;
 
-        public BitwiseEvalulator(bool verbose, EnvironmentContext environmentContext)
+        public BitwiseEvalulator(VerboseLogContext logCtx, EnvironmentContext environmentContext)
         {
-            _verbose = verbose;
-
-            Tokenizer.Verbose = verbose;
-            _parser = new(verbose);
-            _evaluator = new(verbose, environmentContext);
+            _tokenizer = new(logCtx);
+            _parser = new(logCtx);
+            _evaluator = new(environmentContext);
             EnvironmentContext = environmentContext;
         }
 
         public Result<ArbitraryNumber> EvaluateExpression(string expression)
         {
-            Result<List<Token>> tokenResult = Tokenizer.Tokenize(expression);
+            Result<List<Token>> tokenResult = _tokenizer.Tokenize(expression);
             if (!tokenResult.IsSuccess)
             {
                 return Result<ArbitraryNumber>.Failure(tokenResult.Error);

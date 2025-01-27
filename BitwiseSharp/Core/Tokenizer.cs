@@ -7,13 +7,27 @@ using static BitwiseSharp.Constants.Colors;
 
 namespace BitwiseSharp.Core
 {
-    internal static class Tokenizer
+    internal class Tokenizer
     {
-        private static Regex _inputPattern = new(@"\blet\b|[a-zA-Z_][a-zA-Z0-9_]*|=|~|\(|\)|-?0(x|X)[0-9a-fA-F]+|-?0(b|B)[01]+|-?\d+|<<|>>|&|\^|\|", RegexOptions.Compiled);
+        private static Regex _inputPattern = new(@"\blet\b|[a-zA-Z_][a-zA-Z0-9_]*|=|~|\(|\)|-?0(x|X)[0-9a-fA-F]+|-?0(b|B)[01]+|-?\d+|<<|>>|&|\^|\||\+|\-|\*|\/", RegexOptions.Compiled);
 
-        internal static bool Verbose;
+        private readonly VerboseLogContext _logCtx;
 
-        internal static Result<List<Token>> Tokenize(string expression)
+        /// <summary>Initializes an instance of the <see cref="Tokenizer"/> class.</summary>
+        /// <param name="logCtx">The logging context of the tokenizer.</param>
+        internal Tokenizer(VerboseLogContext logCtx)
+        {
+            _logCtx = logCtx;
+        }
+
+        /// <summary>
+        /// Tokenizes the <paramref name="expression"/> into a series of parsable <see cref="Token"/>s.
+        /// </summary>
+        /// <param name="expression">The expression to tokenize.</param>
+        /// <returns>
+        /// A <see cref="Result{T}"/> containing a list of <see cref="Token"/> objects, or a failure result if the tokenization fails.
+        /// </returns>
+        internal Result<List<Token>> Tokenize(string expression)
         {
             MatchCollection matches = _inputPattern.Matches(expression);
             if (matches.Count == 0)
@@ -41,14 +55,22 @@ namespace BitwiseSharp.Core
                 {
                     "let" => TokenType.Let,
                     "=" => TokenType.Assignment,
+
                     "(" => TokenType.LeftParenthesis,
                     ")" => TokenType.RightParenthesis,
+
                     "&" => TokenType.BitwiseAnd,
                     "|" => TokenType.BitwiseOr,
                     "^" => TokenType.BitwiseXor,
                     "~" => TokenType.BitwiseNot,
                     "<<" => TokenType.LeftShift,
                     ">>" => TokenType.RightShift,
+
+                    "+" => TokenType.Plus,
+                    "-" => TokenType.Minus,
+                    "*" => TokenType.Multiply,
+                    "/" => TokenType.Divide,
+
                     _ => Regex.IsMatch(value, @"^[a-zA-Z_][a-zA-Z_]*$") ? TokenType.Identifier : TokenType.Unknown
                 };
 
@@ -68,46 +90,32 @@ namespace BitwiseSharp.Core
                 currentIndex++;
             }
 
-            if (Verbose)
+            if (_logCtx.Verbose)
             {
-                Console.WriteLine();
                 int typeWidth = tokens.Max(t => t.Type.ToString().Length);
                 int valueWidth = tokens.Max(t => t.Type == TokenType.Identifier ? t.VariableName.Length : t.NumberValue.ToString().Length);
+
+                _logCtx.NewLine(VerboseLogType.Tokenizer);
 
                 for (int i = 0; i < tokens.Count; i++)
                 {
                     string val = tokens[i].Type == TokenType.Identifier ? tokens[i].VariableName : tokens[i].NumberValue.ToString();
 
-                    string typeColor = tokens[i].Type switch
-                    {
-                        TokenType.Let => LIGHT_BLUE,
-                        TokenType.Identifier => GREEN,
-                        TokenType.Assignment => CYAN,
-                        TokenType.Number => ORANGE,
-                        TokenType.LeftParenthesis => LIGHT_RED,
-                        TokenType.RightParenthesis => LIGHT_RED,
-                        TokenType.BitwiseNot => YELLOW,
-                        TokenType.BitwiseAnd => YELLOW,
-                        TokenType.BitwiseOr => YELLOW,
-                        TokenType.BitwiseXor => YELLOW,
-                        TokenType.LeftShift => YELLOW,
-                        TokenType.RightShift => YELLOW,
-                        TokenType.Unknown => RED,
-                        _ => ANSI_RESET
-                    };
-
-                    Console.WriteLine($"{LIGHT_GRAY}Token {(i + 1).ToString("000")}:{ANSI_RESET} " +
-                                      $"{typeColor}{tokens[i].Type.ToString().PadRight(typeWidth)}{ANSI_RESET} " +
-                                      $"Value: {val.PadLeft(valueWidth)}");
+                    _logCtx.Log(VerboseLogType.Tokenizer,
+                        $"{_logCtx.GetColor(WHITE)}Token {(i + 1).ToString("000")}:{ANSI_RESET} " +
+                        $"{_logCtx.GetColorForTokenType(tokens[i].Type)}{tokens[i].Type.ToString().PadRight(typeWidth)}{ANSI_RESET} " +
+                        $"Value: {val.PadLeft(valueWidth)}");
                 }
-
-                Console.WriteLine();
             }
 
             return Result<List<Token>>.Success(tokens);
         }
 
-
+        /// <summary>
+        /// Parses a <see cref="string"/> into a <see cref="ArbitraryNumber"/>.
+        /// </summary>
+        /// <param name="input">The string representation of the number, in hex, binary, or decimal.</param>
+        /// <returns>The numerical value of the <paramref name="input"/>.</returns>
         private static ArbitraryNumber ParseNumber(string input)
         {
             bool isNegative = input.StartsWith("-");
