@@ -13,6 +13,11 @@ namespace BitwiseSharp
 
         public readonly EnvironmentContext EnvironmentContext;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="BitwiseEvalulator"/> class.
+        /// </summary>
+        /// <param name="logCtx">Defines the behavior of verbose logs.</param>
+        /// <param name="environmentContext">The context containing the current symbol table.</param>
         public BitwiseEvalulator(VerboseLogContext logCtx, EnvironmentContext environmentContext)
         {
             _tokenizer = new(logCtx);
@@ -21,6 +26,11 @@ namespace BitwiseSharp
             EnvironmentContext = environmentContext;
         }
 
+        /// <summary>
+        /// Evaluates the <paramref name="expression"/> as a(n) <see cref="ArbitraryNumber"/>.
+        /// </summary>
+        /// <param name="expression">The expression to evaluate</param>
+        /// <returns>A <see cref="Result{ArbitraryNumber}"/> containing the evaluated <see cref="ArbitraryNumber"/>, or a failure message if evaluation fails.</returns>
         public Result<ArbitraryNumber> EvaluateExpression(string expression)
         {
             Result<List<Token>> tokenResult = _tokenizer.Tokenize(expression);

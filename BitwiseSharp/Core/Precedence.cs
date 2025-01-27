@@ -20,5 +20,17 @@ namespace BitwiseSharp.Core
             { TokenType.Divide, (6, false) },
             { TokenType.BitwiseNot, (7, true) }
         };
+
+        internal static bool IsOperator(TokenType type) =>
+            type == TokenType.BitwiseOr  ||
+            type == TokenType.BitwiseXor ||
+            type == TokenType.BitwiseAnd ||
+            type == TokenType.LeftShift  ||
+            type == TokenType.RightShift ||
+            type == TokenType.Plus       ||
+            type == TokenType.Minus      ||
+            type == TokenType.Multiply   ||
+            type == TokenType.Divide     ||
+            type == TokenType.BitwiseNot;
     }
 }

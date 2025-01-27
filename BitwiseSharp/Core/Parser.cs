@@ -5,6 +5,9 @@ using static BitwiseSharp.Constants.Colors;
 
 namespace BitwiseSharp.Core
 {
+    /// <summary>
+    /// Parses a list of <see cref="Token"/>s using a recursive descent parser to construct an AST.
+    /// </summary>
     internal class Parser
     {
         private List<Token> _tokens;
@@ -14,10 +17,7 @@ namespace BitwiseSharp.Core
 
         /// <summary>Initializes an instance of the <see cref="Parser"/> class.</summary>
         /// <param name="logCtx">The logging context of the parser.</param>
-        internal Parser(VerboseLogContext logCtx)
-        {
-            _logCtx = logCtx;
-        }
+        internal Parser(VerboseLogContext logCtx) => _logCtx = logCtx;
 
         /// <summary>
         /// Sets the tokens to be parsed in the current context.
@@ -47,13 +47,13 @@ namespace BitwiseSharp.Core
         /// Parses the root of the expression, which can be a variable definition, assignment, or a binary expression.
         /// </summary>
         /// <returns>A <see cref="Result{Node}"/> containing the parsed <see cref="Node"/>, or a failure message if parsing fails.</returns>
+        // Non-bitwise/arithmetic expressions are caught here.
         private Result<Node> ParseRoot()
         {
-            if (_tokens.Count == 0)
+            if (_tokens == null || _tokens.Count == 0)
                 return Result<Node>.Failure("Unexpected end of input while parsing expression.");
 
-            Result<Node> result;
-
+            // Handle variable definition (`let`)
             if (_tokens[0].Type == TokenType.Let)
             {
                 if (_tokens.Count < 3 || _tokens[1].Type != TokenType.Identifier)
@@ -67,9 +67,11 @@ namespace BitwiseSharp.Core
                 var binaryResult = ParseBinaryExpression(0);
                 if (!binaryResult.IsSuccess) return binaryResult;
 
-                result = Result<Node>.Success(new VariableDefinitionNode(variableName, binaryResult.Value));
+                return Result<Node>.Success(new VariableDefinitionNode(variableName, binaryResult.Value));
             }
-            else if (_tokens.Count > 1 && _tokens[0].Type == TokenType.Identifier && _tokens[1].Type == TokenType.Assignment)
+
+            // Handle variable assignment
+            if (_tokens.Count > 1 && _tokens[0].Type == TokenType.Identifier && _tokens[1].Type == TokenType.Assignment)
             {
                 string variableName = _tokens[0].VariableName;
 
@@ -77,27 +79,31 @@ namespace BitwiseSharp.Core
                 var binaryResult = ParseBinaryExpression(0);
                 if (!binaryResult.IsSuccess) return binaryResult;
 
-                result = Result<Node>.Success(new VariableAssignmentNode(variableName, binaryResult.Value));
+                return Result<Node>.Success(new VariableAssignmentNode(variableName, binaryResult.Value));
             }
-            else if (_tokens.Count > 1 && _tokens[0].Type == TokenType.Identifier && IsOperator(_tokens[1]) && _tokens[2].Type == TokenType.Assignment)
+
+            // Handle assignment with operators
+            if (_tokens.Count > 1 && _tokens[0].Type == TokenType.Identifier && Precedence.IsOperator(_tokens[1].Type) && _tokens[2].Type == TokenType.Assignment)
             {
                 string variableName = _tokens[0].VariableName;
 
                 _tokens.RemoveAt(2);
                 _tokens.Insert(2, new Token(TokenType.LeftParenthesis));
                 _tokens.Add(new Token(TokenType.RightParenthesis));
+
                 var binaryResult = ParseBinaryExpression(0);
                 if (!binaryResult.IsSuccess) return binaryResult;
 
-                result = Result<Node>.Success(new VariableAssignmentNode(variableName, binaryResult.Value));
+                return Result<Node>.Success(new VariableAssignmentNode(variableName, binaryResult.Value));
             }
-            else if (_tokens.Count > 1 && _tokens[0].Type == TokenType.Number && _tokens[1].Type == TokenType.Assignment)
-                return Result<Node>.Failure("Invalid syntax: Left-hand side of assignment must be a variable.");
-            else
-                result = ParseBinaryExpression(0);
 
-            return result;
+            // Handle invalid assignment to a number
+            if (_tokens.Count > 1 && _tokens[0].Type == TokenType.Number && _tokens[1].Type == TokenType.Assignment)
+                return Result<Node>.Failure("Invalid syntax: Left-hand side of assignment must be a variable.");
+
+            return ParseBinaryExpression(0);
         }
+
 
         /// <summary>
         /// Parses a binary expression, which can have multiple operators with varying precedence.
@@ -116,9 +122,9 @@ namespace BitwiseSharp.Core
                 var currentTokenResult = CurrentToken();
                 if (!currentTokenResult.IsSuccess) return Result<Node>.Failure(currentTokenResult.Error);
 
-                Token currentToken = currentTokenResult.Value;
+                var currentToken = currentTokenResult.Value;
 
-                if (!IsOperator(currentToken)) break;
+                if (!Precedence.IsOperator(currentToken.Type)) break;
 
                 var (precedence, rightAssociative) = Precedence.OperatorPrecedence[currentToken.Type];
                 if (precedence < minPrecedence) break;
@@ -126,7 +132,7 @@ namespace BitwiseSharp.Core
                 var consumeTokenResult = ConsumeToken();
                 if (!currentTokenResult.IsSuccess) return Result<Node>.Failure(currentTokenResult.Error);
 
-                Token op = consumeTokenResult.Value;
+                var op = consumeTokenResult.Value;
 
                 int nextMinPrecedence = rightAssociative ? precedence : precedence + 1;
                 Result<Node> rightResult = ParseBinaryExpression(nextMinPrecedence);
@@ -151,15 +157,15 @@ namespace BitwiseSharp.Core
             var currentTokenResult = CurrentToken();
             if (!currentTokenResult.IsSuccess) return Result<Node>.Failure(currentTokenResult.Error);
 
-            Token currentToken = currentTokenResult.Value;
+            var currentToken = currentTokenResult.Value;
 
             if (IsUnaryOperator(currentToken))
             {
                 var consumeTokenResult = ConsumeToken();
                 if (!currentTokenResult.IsSuccess) return Result<Node>.Failure(currentTokenResult.Error);
 
-                Token op = consumeTokenResult.Value;
-                Result<Node> operandResult = ParseUnaryExpression();
+                var op = consumeTokenResult.Value;
+                var operandResult = ParseUnaryExpression();
                 if (!operandResult.IsSuccess) return operandResult;
 
                 return Result<Node>.Success(new UnaryNode(op.Type, operandResult.Value));
@@ -180,7 +186,7 @@ namespace BitwiseSharp.Core
             var currentTokenResult = CurrentToken();
             if (!currentTokenResult.IsSuccess) return Result<Node>.Failure(currentTokenResult.Error);
 
-            Token currentToken = currentTokenResult.Value;
+            var currentToken = currentTokenResult.Value;
 
             if (currentToken.Type == TokenType.Number)
             {
@@ -196,7 +202,7 @@ namespace BitwiseSharp.Core
                 var consumeTokenResult = ConsumeToken();
                 if (!currentTokenResult.IsSuccess) return Result<Node>.Failure(currentTokenResult.Error);
 
-                Result<Node> exprResult = ParseRoot();
+                var exprResult = ParseRoot();
                 if (!exprResult.IsSuccess) return exprResult;
 
                 var closingParenthesisResult = CurrentToken();
@@ -244,13 +250,6 @@ namespace BitwiseSharp.Core
         }
 
         /// <summary>
-        /// Determines whether the given token is an operator.
-        /// </summary>
-        /// <param name="token">The token to check.</param>
-        /// <returns><c>true</c> if the token is an operator; otherwise, <c>false</c>.</returns>
-        private bool IsOperator(Token token) => Precedence.OperatorPrecedence.ContainsKey(token.Type);
-
-        /// <summary>
         /// Determines whether the given token is a unary operator.
         /// </summary>
         /// <param name="token">The token to check.</param>
@@ -260,7 +259,7 @@ namespace BitwiseSharp.Core
             if (!(token.Type == TokenType.BitwiseNot || token.Type == TokenType.Minus)) return false;
 
             return _position == 0 ||
-                IsOperator(_tokens[_position - 1]) ||
+                Precedence.IsOperator(_tokens[_position - 1].Type) ||
                 _tokens[_position - 1].Type == TokenType.LeftParenthesis;
         }
 

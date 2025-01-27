@@ -2,7 +2,7 @@
 
 namespace BitwiseSharp.Types
 {
-    /// <summary>Represents the base class for all expression nodes in the AST.</summary>
+    /// <summary>Represents the base record for all expression nodes in the AST.</summary>
     /// <param name="Type">The type of expression the node represents.</param>
     internal abstract record Node(ExpressionType Type);
 

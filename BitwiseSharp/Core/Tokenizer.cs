@@ -7,6 +7,9 @@ using static BitwiseSharp.Constants.Colors;
 
 namespace BitwiseSharp.Core
 {
+    /// <summary>
+    /// Tokenizes string expressions into lists of <see cref="Token"/>s for further parsing.
+    /// </summary>
     internal class Tokenizer
     {
         private static Regex _inputPattern = new(@"\blet\b|[a-zA-Z_][a-zA-Z0-9_]*|=|~|\(|\)|-?0(x|X)[0-9a-fA-F]+|-?0(b|B)[01]+|-?\d+|<<|>>|&|\^|\||\+|\-|\*|\/", RegexOptions.Compiled);
@@ -41,6 +44,7 @@ namespace BitwiseSharp.Core
             foreach (Match match in matches)
             {
                 string value = match.Value;
+
                 while (currentIndex < match.Index)
                 {
                     char unrecognizedChar = expression[currentIndex];
@@ -75,19 +79,9 @@ namespace BitwiseSharp.Core
                 };
 
                 if (tokenType == TokenType.Unknown && value.Any(char.IsDigit)) tokens.Add(new Token(TokenType.Number, ParseNumber(value)));
-                else tokens.Add(new Token(tokenType, variableName: tokenType == TokenType.Identifier ? value : null));
+                else tokens.Add(new Token(tokenType, identifier: tokenType == TokenType.Identifier ? value : null));
 
                 currentIndex = match.Index + match.Length;
-            }
-
-            while (currentIndex < expression.Length)
-            {
-                char unrecognizedChar = expression[currentIndex];
-                if (!char.IsWhiteSpace(unrecognizedChar))
-                {
-                    return Result<List<Token>>.Failure($"Unrecognized character '{unrecognizedChar}' in the expression.");
-                }
-                currentIndex++;
             }
 
             if (_logCtx.Verbose)
