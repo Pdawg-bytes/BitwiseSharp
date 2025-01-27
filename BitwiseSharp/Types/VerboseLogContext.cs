@@ -6,7 +6,7 @@ using static BitwiseSharp.Constants.Colors;
 namespace BitwiseSharp.Types
 {
     /// <summary>
-    /// Defines the context for enabled logging with support for color and verbosity controls.
+    /// Defines the context for logging with support for color and verbosity controls.
     /// </summary>
     public class VerboseLogContext
     {

@@ -98,7 +98,7 @@ namespace BitwiseSharp.Core
             }
 
             // Handle invalid assignment to a number
-            if (_tokens.Count > 1 && _tokens[0].Type == TokenType.Number && _tokens[1].Type == TokenType.Assignment)
+            if (_tokens[_tokens.Count - 1].Type == TokenType.Identifier && _tokens[_tokens.Count - 2].Type == TokenType.Assignment)
                 return Result<Node>.Failure("Invalid syntax: Left-hand side of assignment must be a variable.");
 
             return ParseBinaryExpression(0);
