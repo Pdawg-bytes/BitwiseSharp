@@ -83,6 +83,10 @@ namespace BitwiseSharp.Core
                     if (!rightResult.IsSuccess) return rightResult;
                     ArbitraryNumber right = rightResult.Value;
 
+                    if ((binaryNode.Operator == TokenType.LeftShift || binaryNode.Operator == TokenType.RightShift)
+                        && (right > int.MaxValue || right < int.MinValue))
+                        return Result<ArbitraryNumber>.Failure($"The number {right} is too large or too small for the right-hand side of a shift operation.");
+
                     return binaryNode.Operator switch
                     {
                         TokenType.BitwiseAnd => Result<ArbitraryNumber>.Success(left & right),
