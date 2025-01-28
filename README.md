@@ -8,7 +8,7 @@ The core functionality supports bitwise operations such as `AND`, `OR`, `XOR`, `
 ## Features
 - **Bitwise Operations:** Supports common bitwise operators like `AND (&)`, `OR (|)`, `XOR (^)`, and `NOT (~)`.
 - **Arithmetic Operations:** Supports standard arithmetic operations: `+`, `-`, `*`, `/`, and `%`.
-- **Variable Assignment:** You can assign values to variables using the `let` keyword and perform operations using those variables.
+- **Variable Assignment:** You can assign values to existing variables, or create new ones using the `let` keyword and perform operations using them.
 - **Arbitrary Precision:** Uses `BigInteger` from `System.Numerics` to handle expressions involving large numbers.
 - **Recursive Descent Parser:** The parser uses a recursive descent method to build an Abstract Syntax Tree (AST) from tokens.
 - **Verbose Logging:** Enables logging of parsing steps and evaluation process for debugging purposes.
