@@ -80,7 +80,7 @@ You may also modify or interact with the `EnvironmentContext` of the evaluator:
 // Attempts to create a new symbol called "name" with the value 40. This will return false if the symbol is already defined.
 envCtx.TryCreateVariable("name", 40);
 
-// ouput will contain the value 40. This will return false if the symbol does not exist.
+// output will contain the value 40. This will return false if the symbol does not exist.
 System.Numerics.BigInteger output;
 envCtx.TryGetVariable("name", out output);
 
