@@ -33,6 +33,13 @@
         }
 
         /// <summary>
+        /// Attempts to remove a variable from the symbol table.
+        /// </summary>
+        /// <param name="name">The name of the variable to remove.</param>
+        /// <returns><c>true</c> if the variable was successfully removed; otherwise, <c>false</c>.</returns>
+        public bool TryRemoveVariable(string name) => _symbolTable.Remove(name);
+
+        /// <summary>
         /// Sets the value of an existing variable.
         /// </summary>
         /// <param name="name">The name of the variable to set.</param>

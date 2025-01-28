@@ -1,7 +1,6 @@
 ﻿using BitwiseSharp;
 using BitwiseSharp.Types;
 using static BitwiseSharp.Constants.Colors;
-using static System.Runtime.InteropServices.JavaScript.JSType;
 
 namespace InteractiveShell
 {
