@@ -94,6 +94,7 @@ namespace BitwiseSharp.Core
                         TokenType.Minus => Result<ArbitraryNumber>.Success(left - right),
                         TokenType.Multiply => Result<ArbitraryNumber>.Success(left * right),
                         TokenType.Divide => Result<ArbitraryNumber>.Success(left / right),
+                        TokenType.Modulus => Result<ArbitraryNumber>.Success(left % right),
                         _ => Result<ArbitraryNumber>.Failure($"Invalid binary operator type: {binaryNode.Operator}")
                     };
             }

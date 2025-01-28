@@ -12,7 +12,7 @@ namespace BitwiseSharp.Core
     /// </summary>
     internal class Tokenizer
     {
-        private static Regex _inputPattern = new(@"\blet\b|[a-zA-Z_][a-zA-Z0-9_]*|=|~|\(|\)|-?0(x|X)[0-9a-fA-F]+|-?0(b|B)[01]+|-?\d+|<<|>>|&|\^|\||\+|\-|\*|\/", RegexOptions.Compiled);
+        private static Regex _inputPattern = new(@"\blet\b|[a-zA-Z_][a-zA-Z0-9_]*|=|~|\(|\)|-?0(x|X)[0-9a-fA-F]+|-?0(b|B)[01]+|-?\d+|<<|>>|&|\^|\||\+|\-|\*|\/|\%", RegexOptions.Compiled);
 
         private readonly VerboseLogContext _logCtx;
 
@@ -74,6 +74,7 @@ namespace BitwiseSharp.Core
                     "-" => TokenType.Minus,
                     "*" => TokenType.Multiply,
                     "/" => TokenType.Divide,
+                    "%" => TokenType.Modulus,
 
                     _ => Regex.IsMatch(value, @"^[a-zA-Z_][a-zA-Z_]*$") ? TokenType.Identifier : TokenType.Unknown
                 };

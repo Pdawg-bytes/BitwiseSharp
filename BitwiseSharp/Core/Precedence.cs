@@ -18,6 +18,7 @@ namespace BitwiseSharp.Core
             { TokenType.Minus, (5, false) },
             { TokenType.Multiply, (6, false) },
             { TokenType.Divide, (6, false) },
+            { TokenType.Modulus, (6, false) },
             { TokenType.BitwiseNot, (7, true) }
         };
 
@@ -31,6 +32,7 @@ namespace BitwiseSharp.Core
             type == TokenType.Minus      ||
             type == TokenType.Multiply   ||
             type == TokenType.Divide     ||
+            type == TokenType.Modulus    ||
             type == TokenType.BitwiseNot;
     }
 }

@@ -47,6 +47,9 @@
         /// <summary>Token representing the division operator '/'.</summary>
         Divide,
 
+        /// <summary>Token representing the modulus operator '%'.</summary>
+        Modulus,
+
         /// <summary>Token representing the left shift operator '<<'.</summary>
         LeftShift,
 
