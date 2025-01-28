@@ -79,12 +79,12 @@
         /// <summary>
         /// The ANSI escape sequence for purple.
         /// </summary>
-        public const string PURPLE = "\u001b[38;2;148;0;211m";
+        public const string PURPLE = "\u001b[38;2;122;77;156m";
 
         /// <summary>
         /// The ANSI escape sequence for light purple.
         /// </summary>
-        public const string LIGHT_PURPLE = "\u001b[38;2;238;130;238m";
+        public const string LIGHT_PURPLE = "\u001b[38;2;245;221;255m";
 
         /// <summary>
         /// The ANSI escape sequence for pink.
