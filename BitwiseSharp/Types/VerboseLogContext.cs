@@ -10,8 +10,8 @@ namespace BitwiseSharp.Types
     /// </summary>
     public class VerboseLogContext
     {
-        internal readonly bool _colorsEnabled;
-        internal readonly bool Verbose;
+        public bool ColorsEnabled;
+        public bool Verbose;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="VerboseLogContext"/> class.
@@ -20,7 +20,7 @@ namespace BitwiseSharp.Types
         /// <param name="enabled">Indicates whether verbose logging is enabled.</param>
         public VerboseLogContext(bool colorsEnabled, bool enabled)
         {
-            _colorsEnabled = colorsEnabled;
+            ColorsEnabled = colorsEnabled;
             Verbose = enabled;
         }
 
@@ -37,7 +37,7 @@ namespace BitwiseSharp.Types
         /// <param name="color">The color code to retrieve the color for.</param>
         /// <returns>The color string if enabled, otherwise an empty string.</returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal string GetColor(string color) => _colorsEnabled ? color : string.Empty;
+        internal string GetColor(string color) => ColorsEnabled ? color : string.Empty;
 
         /// <summary>
         /// Gets the color for a specific token type.

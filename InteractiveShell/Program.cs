@@ -7,6 +7,7 @@ namespace InteractiveShell
     internal class Program
     {
         static BitwiseEvalulator _eval;
+        static VerboseLogContext _loggingCtx;
         static string _numberFormat = "D";
         static int _padding = 0;
 
@@ -14,9 +15,9 @@ namespace InteractiveShell
         {
             Console.CancelKeyPress += new ConsoleCancelEventHandler(OnCancelKeyPress);
 
-            VerboseLogContext logCtx = new(false, false);
-            logCtx.LogGenerated += LogCtx_LogGenerated;
-            _eval = new(logCtx, new BitwiseSharp.Core.EnvironmentContext());
+            _loggingCtx = new(true, false);
+            _loggingCtx.LogGenerated += LogCtx_LogGenerated;
+            _eval = new(_loggingCtx, new BitwiseSharp.Core.EnvironmentContext());
             RunShell();
         }
 
@@ -34,6 +35,8 @@ namespace InteractiveShell
             if (input == "sb") { _numberFormat = "B"; RunShell(); }
             if (input == "sd") { _numberFormat = "D"; RunShell(); }
             if (input == "sh") { _numberFormat = "X"; RunShell(); }
+            if (input == "ev") { _loggingCtx.Verbose = true; RunShell(); }
+            if (input == "dv") { _loggingCtx.Verbose = false; RunShell(); }
 
             if (input.StartsWith("sp"))
             {

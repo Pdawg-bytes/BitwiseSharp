@@ -12,7 +12,7 @@ namespace BitwiseSharp.Core
     /// </summary>
     internal class Tokenizer
     {
-        private static Regex _inputPattern = new(@"\blet\b|[a-zA-Z_][a-zA-Z0-9_]*|=|~|\(|\)|-?0(x|X)[0-9a-fA-F]+|-?0(b|B)[01]+|-?\d+|<<|>>|&|\^|\||\+|\-|\*|\/|\%", RegexOptions.Compiled);
+        private static Regex _inputPattern = new(@"\blet\b|[a-zA-Z_][a-zA-Z0-9_]*|=|~|\(|\)|-?0(x|X)[0-9a-fA-F]+|-?0(b|B)[01]+|\d+|<<|>>|&|\^|\||\+|\-|\*|\/|\%", RegexOptions.Compiled);
 
         private readonly VerboseLogContext _logCtx;
 
@@ -89,8 +89,6 @@ namespace BitwiseSharp.Core
             {
                 int typeWidth = tokens.Max(t => t.Type.ToString().Length);
                 int valueWidth = tokens.Max(t => t.Type == TokenType.Identifier ? t.VariableName.Length : t.NumberValue.ToString().Length);
-
-                _logCtx.NewLine(VerboseLogType.Tokenizer);
 
                 for (int i = 0; i < tokens.Count; i++)
                 {
