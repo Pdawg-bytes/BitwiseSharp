@@ -8,7 +8,7 @@
         /// <summary>
         /// A dictionary that maps variable names to their respective values.
         /// </summary>
-        private readonly Dictionary<string, ArbitraryNumber> _symbolTable = new();
+        private Dictionary<string, ArbitraryNumber> _symbolTable = new();
 
         /// <summary>
         /// Attempts to retrieve the value of a variable by its name.
@@ -52,5 +52,10 @@
         /// <param name="name">The name of the variable to check.</param>
         /// <returns><c>true</c> if the variable exists; otherwise, <c>false</c>.</returns>
         public bool HasVariable(string name) => _symbolTable.ContainsKey(name);
+
+        /// <summary>
+        /// Removes all entries from the symbol table.
+        /// </summary>
+        public void ClearContext() => _symbolTable.Clear();
     }
 }

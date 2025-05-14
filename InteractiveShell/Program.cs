@@ -30,7 +30,8 @@ namespace InteractiveShell
             Console.Write(ANSI_RESET);
 
             if (input == null) { Console.WriteLine(); RunShell(); }
-            if (input == "exit") return;
+            if (input == "exit") Environment.Exit(0);
+            if (input == "cls") { _eval.EnvironmentContext.ClearContext(); RunShell();  }
             if (input == "help") { PrintHelp(); RunShell(); }
             if (input == "sb") { _numberFormat = "B"; RunShell(); }
             if (input == "sd") { _numberFormat = "D"; RunShell(); }
@@ -75,6 +76,7 @@ namespace InteractiveShell
                 $"  {LIGHT_PURPLE}sp <number>{ANSI_RESET} - Set padding (e.g., {LIGHT_PURPLE}sp 8{ANSI_RESET} for 8-character width).",
                 "  ",
                 $"To view this help message again, type {LIGHT_PURPLE}help{ANSI_RESET}.",
+                $"To clear the environment context, type {LIGHT_PURPLE}cls{ANSI_RESET}.",
                 $"This shell also supports basic features like history navigation (using the up and down arrows) and clearing with {LIGHT_PURPLE}Ctrl-C{ANSI_RESET}.",
             ];
 

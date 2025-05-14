@@ -12,7 +12,28 @@ namespace BitwiseSharp.Core
     /// </summary>
     internal class Tokenizer
     {
-        private static Regex _inputPattern = new(@"\blet\b|[a-zA-Z_][a-zA-Z0-9_]*|=|~|\(|\)|-?0(x|X)[0-9a-fA-F]+|-?0(b|B)[01]+|\d+|<<|>>|&|\^|\||\+|\-|\*|\/|\%", RegexOptions.Compiled);
+        private static Regex _inputPattern = new(@"
+            \blet\b
+            |[a-zA-Z_][a-zA-Z0-9_]*
+            |=
+            |~
+            |\(
+            |\)
+            |0[xX][a-zA-Z0-9_]+
+            |0[bB][a-zA-Z0-9_]+
+            |\d+
+            |<<
+            |>>
+            |&
+            |\^
+            |\|
+            |\+
+            |\-
+            |\*
+            |\/
+            |\%",
+        RegexOptions.Compiled | RegexOptions.IgnorePatternWhitespace);
+
 
         private readonly VerboseLogContext _logCtx;
 
@@ -76,10 +97,17 @@ namespace BitwiseSharp.Core
                     "/" => TokenType.Divide,
                     "%" => TokenType.Modulus,
 
-                    _ => Regex.IsMatch(value, @"^[a-zA-Z_][a-zA-Z_]*$") ? TokenType.Identifier : TokenType.Unknown
+                    _ => Regex.IsMatch(value, @"^[a-zA-Z_][a-zA-Z0-9_]*$") ? TokenType.Identifier : TokenType.Unknown
                 };
 
-                if (tokenType == TokenType.Unknown && value.Any(char.IsDigit)) tokens.Add(new Token(TokenType.Number, ParseNumber(value)));
+                if (tokenType == TokenType.Unknown && value.Any(char.IsDigit))
+                {
+                    var result = ParseNumber(value);
+                    if (result.IsSuccess)
+                        tokens.Add(new Token(TokenType.Number, result.Value));
+                    else
+                        return Result<List<Token>>.Failure(result.Error);
+                }
                 else tokens.Add(new Token(tokenType, identifier: tokenType == TokenType.Identifier ? value : null));
 
                 currentIndex = match.Index + match.Length;
@@ -104,27 +132,41 @@ namespace BitwiseSharp.Core
             return Result<List<Token>>.Success(tokens);
         }
 
-        /// <summary>
-        /// Parses a <see cref="string"/> into a <see cref="ArbitraryNumber"/>.
-        /// </summary>
-        /// <param name="input">The string representation of the number, in hex, binary, or decimal.</param>
-        /// <returns>The numerical value of the <paramref name="input"/>.</returns>
-        private static ArbitraryNumber ParseNumber(string input)
+        private static Result<ArbitraryNumber> ParseNumber(string input)
         {
             bool isNegative = input.StartsWith("-");
             if (isNegative)
                 input = input.Substring(1);
 
-            ArbitraryNumber result = input switch
+            try
             {
-                string s when s.StartsWith("0x", StringComparison.OrdinalIgnoreCase) =>
-                    ParseHex(s.Substring(2)),
-                string s when s.StartsWith("0b", StringComparison.OrdinalIgnoreCase) =>
-                    ParseBinary(s.Substring(2)),
-                _ => ArbitraryNumber.Parse(input, NumberStyles.Integer)
-            };
+                ArbitraryNumber result;
 
-            return isNegative ? -result : result;
+                if (input.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                {
+                    string hex = input.Substring(2);
+                    if (!Regex.IsMatch(hex, @"^[0-9a-fA-F]+$"))
+                        return Result<ArbitraryNumber>.Failure("Hex number must only contain digits 0-9 and letters A-F.");
+                    result = ParseHex(hex);
+                }
+                else if (input.StartsWith("0b", StringComparison.OrdinalIgnoreCase))
+                {
+                    string binary = input.Substring(2);
+                    if (!Regex.IsMatch(binary, @"^[01]+$"))
+                        return Result<ArbitraryNumber>.Failure("Binary number must only contain digits 0 and 1.");
+                    result = ParseBinary(binary);
+                }
+                else
+                {
+                    result = ArbitraryNumber.Parse(input, NumberStyles.Integer);
+                }
+
+                return Result<ArbitraryNumber>.Success(isNegative ? -result : result);
+            }
+            catch (Exception ex)
+            {
+                return Result<ArbitraryNumber>.Failure($"Failed to parse number: {ex.Message}");
+            }
         }
 
         private static ArbitraryNumber ParseBinary(string binaryInput) => binaryInput.Aggregate<Char, ArbitraryNumber>(0, (result, bit) => (result << 1) | (bit == '1' ? 1 : 0));

@@ -37,7 +37,17 @@ namespace BitwiseSharp.Core
         {
             Result<Node> result = ParseRoot();
 
-            if (result.IsSuccess && _logCtx.Verbose)
+            if (!result.IsSuccess)
+                return result;
+
+            if (_position < _tokens.Count)
+            {
+                var remainingToken = CurrentToken();
+                if (!remainingToken.IsSuccess) return Result<Node>.Failure(remainingToken.Error);
+                return Result<Node>.Failure($"Unexpected token after expression: {remainingToken.Value.Type}");
+            }
+
+            if (_logCtx.Verbose)
                 _logCtx.Log(VerboseLogType.Parser, "\n" + PrintAST(result.Value));
 
             return result;
@@ -56,12 +66,13 @@ namespace BitwiseSharp.Core
             // Handle variable definition (`let`)
             if (_tokens[0].Type == TokenType.Let)
             {
-                if (_tokens.Count < 3 || _tokens[1].Type != TokenType.Identifier)
-                    return Result<Node>.Failure("Invalid syntax: Expected a variable name after 'let'.");
+                if (_tokens.Count < 2 || _tokens[1].Type != TokenType.Identifier)
+                    return Result<Node>.Failure("Invalid syntax: Expected an identifier after 'let'.");
+
+                if (_tokens.Count < 3 || _tokens[2].Type != TokenType.Assignment)
+                    return Result<Node>.Failure("Invalid syntax: Expected '=' after the identifier.");
 
                 string variableName = _tokens[1].VariableName;
-                if (_tokens[2].Type != TokenType.Assignment)
-                    return Result<Node>.Failure("Invalid syntax: Expected '=' after the variable name.");
 
                 _tokens = _tokens.Skip(3).ToList();
                 var binaryResult = ParseBinaryExpression(0);
@@ -83,7 +94,7 @@ namespace BitwiseSharp.Core
             }
 
             // Handle assignment with operators
-            if (_tokens.Count > 1 && _tokens[0].Type == TokenType.Identifier && Precedence.IsOperator(_tokens[1].Type) && _tokens[2].Type == TokenType.Assignment)
+            if (_tokens.Count > 2 && _tokens[0].Type == TokenType.Identifier && Precedence.IsOperator(_tokens[1].Type) && _tokens[2].Type == TokenType.Assignment)
             {
                 string variableName = _tokens[0].VariableName;
 

@@ -87,6 +87,9 @@ namespace BitwiseSharp.Core
                         && (right > int.MaxValue || right < int.MinValue))
                         return Result<ArbitraryNumber>.Failure($"The number {right} is too large or too small for the right-hand side of a shift operation.");
 
+                    if ((binaryNode.Operator == TokenType.Divide) && right == 0)
+                        return Result<ArbitraryNumber>.Failure("Cannot divide by zero.");
+
                     return binaryNode.Operator switch
                     {
                         TokenType.BitwiseAnd => Result<ArbitraryNumber>.Success(left & right),
